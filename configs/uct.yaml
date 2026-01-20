@@ -1,0 +1,11 @@
+seed: 42
+board_size: 5
+max_moves: 200
+mcts:
+  simulations: 200
+  c_uct: 1.4
+  rollout_depth: 50
+arena:
+  matches: 20
+  agent_a: random
+  agent_b: uct
