@@ -1,0 +1,13 @@
+seed: 42
+board_size: 5
+max_moves: 200
+mcts:
+  simulations: 200
+  c_puct: 1.5
+  rollout_depth: 50
+model:
+  path: outputs/models/policy_value.pt
+arena:
+  matches: 20
+  agent_a: uct
+  agent_b: puct
