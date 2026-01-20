@@ -35,7 +35,7 @@ class ActionSpace:
 
     def action_to_move(self, action: Action, player: int) -> Tuple[int, int, int, int]:
         row, col, direction = action
-        delta_row = 1 if player == 1 else -1
+        delta_row = -1 if player == 1 else 1
         if direction == 0:
             return row, col, row + delta_row, col
         if direction == 1:
@@ -52,7 +52,7 @@ class ActionSpace:
             for col in range(cols):
                 if board[row, col] != player:
                     continue
-                forward_row = row + (1 if player == 1 else -1)
+                forward_row = row + (-1 if player == 1 else 1)
                 if forward_row < 0 or forward_row >= rows:
                     continue
                 if board[forward_row, col] == 0:

@@ -107,7 +107,7 @@ class PUCT:
 
     def _move_to_action(self, move: Tuple[int, int, int, int], player: int) -> Tuple[int, int, int] | None:
         r0, c0, r1, c1 = move
-        delta_row = 1 if player == 1 else -1
+        delta_row = -1 if player == 1 else 1
         if r1 - r0 != delta_row:
             return None
         if c1 == c0:

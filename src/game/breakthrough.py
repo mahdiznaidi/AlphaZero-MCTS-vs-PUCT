@@ -25,7 +25,7 @@ class BreakthroughState:
 
     def legal_moves(self) -> List[Move]:
         moves: List[Move] = []
-        direction = -1 if self.player == -1 else 1
+        direction = -1 if self.player == 1 else 1
         opponent = -self.player
         rows, cols = self.board.shape
         for r in range(rows):
