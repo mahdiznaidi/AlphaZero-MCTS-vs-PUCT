@@ -1,19 +1,25 @@
 from __future__ import annotations
 
+"""
+Self‑play game generation for Breakthrough.
+
+This script runs a series of self‑play games using PUCT and optionally a
+policy/value network, then writes the resulting state/policy/value
+triples to disk.  These data can be used to train the network.
+"""
+
 import argparse
 import pathlib
 from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-import torch
 import yaml
 
 from src.game.action_space import ActionSpace
 from src.game.breakthrough import BreakthroughState
 from src.game.encoding import encode_state
 from src.mcts.puct import PUCT
-from src.nn.model import PolicyValueNet
 from src.utils.seed import set_seed
 
 
@@ -42,7 +48,11 @@ def play_game(mcts: PUCT, config: dict) -> List[SelfPlaySample]:
     temperature_moves = config["selfplay"]["temperature_moves"]
     for move_index in range(config["max_moves"]):
         policy = mcts.root_policy(state)
-        temperature = config["selfplay"]["temperature_start"] if move_index < temperature_moves else config["selfplay"]["temperature_end"]
+        temperature = (
+            config["selfplay"]["temperature_start"]
+            if move_index < temperature_moves
+            else config["selfplay"]["temperature_end"]
+        )
         policy = temperature_policy(policy, temperature)
         action_space = ActionSpace(board_size=config["board_size"])
         moves = action_space.moves_from_policy(state.board, state.player, policy)
@@ -74,10 +84,27 @@ def play_game(mcts: PUCT, config: dict) -> List[SelfPlaySample]:
 
 
 def generate_selfplay(config: dict) -> None:
+    """
+    Generate self‑play games and save the resulting dataset to disk.
+
+    The neural network and torch are imported lazily only if a model
+    path is provided and exists.  This allows self‑play generation to
+    run in environments without PyTorch when training is not required.
+
+    Args:
+        config: Configuration dictionary from YAML.
+    """
     set_seed(config["seed"])
     model_path = pathlib.Path(config.get("model", {}).get("path", ""))
     policy_value_fn = None
     if model_path and model_path.exists():
+        try:
+            import torch  # type: ignore
+            from src.nn.model import PolicyValueNet
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "PyTorch is required for using a trained neural network during self‑play generation."
+            ) from exc
         model = PolicyValueNet(board_size=config["board_size"])
         model.load_state_dict(torch.load(model_path, map_location="cpu"))
         policy_value_fn = model.predict
@@ -94,9 +121,16 @@ def generate_selfplay(config: dict) -> None:
     for _ in range(config["selfplay"]["games"]):
         all_samples.extend(play_game(mcts, config))
 
-    states = np.stack([s.state for s in all_samples], axis=0)
-    policies = np.stack([s.policy for s in all_samples], axis=0)
-    values = np.array([s.value for s in all_samples], dtype=np.float32)
+    # Stack samples into numpy arrays for saving
+    if all_samples:
+        states = np.stack([s.state for s in all_samples], axis=0)
+        policies = np.stack([s.policy for s in all_samples], axis=0)
+        values = np.array([s.value for s in all_samples], dtype=np.float32)
+    else:
+        # No samples generated (should not happen on typical boards)
+        states = np.empty((0, 0, 0, 0), dtype=np.float32)
+        policies = np.empty((0, mcts.action_space.num_actions), dtype=np.float32)
+        values = np.empty((0,), dtype=np.float32)
 
     output_path = pathlib.Path(config["selfplay"]["dataset_path"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,7 +139,7 @@ def generate_selfplay(config: dict) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate self-play games")
+    parser = argparse.ArgumentParser(description="Generate self‑play games")
     parser.add_argument("--config", required=True, help="Path to YAML config")
     parser.add_argument("--games", type=int, help="Override number of games")
     return parser.parse_args()
