@@ -1,0 +1,22 @@
+seed: 42
+board_size: 5
+max_moves: 200
+mcts:
+  simulations: 100
+  c_puct: 1.5
+  rollout_depth: 50
+selfplay:
+  games: 200
+  temperature_start: 1.0
+  temperature_end: 0.1
+  temperature_moves: 10
+  dataset_path: outputs/logs/selfplay_dataset.npz
+training:
+  epochs: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 1.0e-4
+  replay_buffer_size: 50000
+  model_path: outputs/models/policy_value.pt
+model:
+  path: outputs/models/policy_value.pt
